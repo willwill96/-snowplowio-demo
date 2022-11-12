@@ -1,0 +1,28 @@
+{
+    purpose = "ENRICHED_EVENTS"
+
+    aws {
+        accessKey = "admin"
+        secretKey = "admin"
+    }
+
+    input {
+        type = "Kinesis"
+        appName = "enrich_app"
+        streamName = "enriched_good"
+        region: "sa-east-1"
+    }
+    output {
+      good {
+        type = "Postgres"
+        host = "postgres"
+        port = "5432"
+        database = "snowplow"
+        username = "postgres"
+        password = "admin"
+        schema = "atomic"
+        sslMode = "DISABLE"
+      }
+    }
+    
+}

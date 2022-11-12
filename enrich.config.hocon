@@ -1,0 +1,24 @@
+{
+    input {
+        streamName = "collector_good"
+        appName = "enrich_app"
+        region = "sa-east-1"
+        customEndpoint = "http://localstack:4566"
+        cloudwatchCustomEndpoint = "http://localstack:4566"
+        dynamodbCustomEndpoint = "http://localstack:4566"
+    }
+    
+    output {
+        good {
+            streamName = "enriched_good"
+            region = "sa-east-1"
+            customEndpoint = "http://localstack:4566"
+        }
+
+        bad {
+            streamName = "enriched_bad"
+            region = "sa-east-1"
+            customEndpoint = "http://localstack:4566"            
+        }
+    }
+}

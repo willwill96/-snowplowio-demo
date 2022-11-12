@@ -1,0 +1,18 @@
+collector {
+  interface = "0.0.0.0"
+  port = 8080
+
+  streams {
+    good = "collector_good"
+    bad = "collector_bad"
+
+    sink {
+      customEndpoint = "http://localstack:4566"
+      region = sa-east-1
+      aws {
+        accessKey = "admin"
+        secretKey = "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+version: "3.3"
+ 
+services:
+ localstack:
+  container_name: aws-localstack
+  image: localstack/localstack
+  restart: always
+  ports:
+    - "127.0.0.1:4510-4530:4510-4530"
+    - "127.0.0.1:4566:4566"
+    - "127.0.0.1:4571:4571"
+  environment:
+    - AWS_DEFAULT_REGION=sa-east-1
+    - AWS_ACCESS_KEY_ID=admin
+    - AWS_SECRET_ACCESS_KEY=admin
+    - DEFAULT_REGION=sa-east-1
+    - SERVICES=s3,dynamodb,sqs,apigateway,cloudformation,cloudwatch,ec2,iam,kinesis,kms,lambda,route53,secretsmanager,sns,ssm,stepfuncstions,sts
+    - DEBUG=${DEBUG-}
+    - DATA_DIR=${DATA_DIR-}
+    - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR-}
+    - HOST_TMP_FOLDER=${TMPDIR:-/tmp/}localstack
+    - DOCKER_HOST=unix:///var/run/docker.sock
+    - DISABLE_CORS_CHECKS=1
+    - KINESIS_LATENCY=0
+    - KINESIS_INITIALIZE_STREAMS=catch_all_bad:1:sa-east-1,collector_good:1:sa-east-1,collector_bad:1:sa-east-1,enriched_good:1:sa-east-1,enriched_bad:1:sa-east-1
+  volumes:
+    - "${TMPDIR:-/tmp}/localstack:/var/lib/localstack"
+    - "/var/run/docker.sock:/var/run/docker.sock"
+ snowplow-collector:
+  image: snowplow/scala-stream-collector-kinesis:2.8.2
+  depends_on:
+    - localstack
+  volumes:
+    - $PWD/collector.config.hocon:/snowplow/config.hocon
+  ports:
+    - "127.0.0.1:8080:8080"
+  command: --config /snowplow/config.hocon
+ snowplow-enrich:
+  image: snowplow/snowplow-enrich-kinesis:3.5.1
+  environment:
+    - AWS_ACCESS_KEY_ID=admin
+    - AWS_SECRET_ACCESS_KEY=admin
+    - AWS_REGION=sa-east-1
+  depends_on:
+    - localstack
+  volumes:
+    - $PWD/enrich.config.hocon:/snowplow/config.hocon
+    - $PWD/enrich.resolver.json:/snowplow/resolver.json
+    - $PWD/enrichments/:/snowplow/enrichments/
+  command: --config /snowplow/config.hocon --iglu-config /snowplow/resolver.json --enrichments /snowplow/enrichments
+ snowplow-postgres-loader:
+  image: snowplow/snowplow-postgres-loader:0.3.3
+  environment:
+    - AWS_ACCESS_KEY_ID=admin
+    - AWS_SECRET_ACCESS_KEY=admin
+    - AWS_REGION=sa-east-1
+  depends_on:
+    - postgres
+    - localstack
+  volumes:
+    - $PWD/postgres-loader.config.hocon:/snowplow/config.hocon
+    - $PWD/postgres-loader.resolver.json:/snowplow/resolver.json
+  command: --config /snowplow/config.hocon --resolver /snowplow/resolver.json
+ postgres:
+  image: postgres
+  ports:
+    - "127.0.0.1:5432:5432"
+  volumes:
+    - $PWD/init-postgres-db.sql:/docker-entrypoint-initdb.d/init-user-db.sh
+  environment:
+    - POSTGRES_PASSWORD=admin
+    - POSTGRES_DB=snowplow
+  
